@@ -1,0 +1,118 @@
+{
+  "version": "1.0",
+  "description": "Ground-truth corpus for L1 STT tests. Run corpus_builder.py to generate audio files.",
+  "clips": [
+    {
+      "file": "corpus/native/clip_001.wav",
+      "reference": "I would like to book a flight to New York",
+      "accent": "en-US",
+      "noise": "clean",
+      "codec": "pcm"
+    },
+    {
+      "file": "corpus/native/clip_002.wav",
+      "reference": "What is the baggage allowance on economy class",
+      "accent": "en-US",
+      "noise": "clean",
+      "codec": "pcm"
+    },
+    {
+      "file": "corpus/native/clip_003.wav",
+      "reference": "I need to cancel my reservation for next Monday",
+      "accent": "en-US",
+      "noise": "clean",
+      "codec": "pcm"
+    },
+    {
+      "file": "corpus/native/clip_004.wav",
+      "reference": "Can I checkin online twenty four hours before departure",
+      "accent": "en-US",
+      "noise": "clean",
+      "codec": "pcm"
+    },
+    {
+      "file": "corpus/native/clip_005.wav",
+      "reference": "My booking reference is A B one two three four",
+      "accent": "en-US",
+      "noise": "clean",
+      "codec": "pcm"
+    },
+    {
+      "file": "corpus/native/clip_006.wav",
+      "reference": "I wanna speak to a real person please",
+      "accent": "en-US",
+      "noise": "clean",
+      "codec": "pcm"
+    },
+    {
+      "file": "corpus/native/clip_007.wav",
+      "reference": "Are meals included on the transatlantic flight",
+      "accent": "en-US",
+      "noise": "clean",
+      "codec": "pcm"
+    },
+    {
+      "file": "corpus/native/clip_008.wav",
+      "reference": "Flight United four seven eight departs at two thirty PM",
+      "accent": "en-US",
+      "noise": "clean",
+      "codec": "pcm"
+    },
+    {
+      "file": "corpus/accented/clip_001.wav",
+      "reference": "I would like to book a flight to New York",
+      "accent": "en-IN",
+      "noise": "clean",
+      "codec": "pcm"
+    },
+    {
+      "file": "corpus/accented/clip_002.wav",
+      "reference": "What is the baggage allowance on economy class",
+      "accent": "en-GB",
+      "noise": "clean",
+      "codec": "pcm"
+    },
+    {
+      "file": "corpus/accented/clip_003.wav",
+      "reference": "Can I get a refund if I cancel my ticket",
+      "accent": "en-AU",
+      "noise": "clean",
+      "codec": "pcm"
+    },
+    {
+      "file": "corpus/noisy/clip_001.wav",
+      "reference": "I would like to book a flight to New York",
+      "accent": "en-US",
+      "noise": "cafeteria_10dB",
+      "codec": "pcm"
+    },
+    {
+      "file": "corpus/noisy/clip_002.wav",
+      "reference": "What is the baggage allowance on economy class",
+      "accent": "en-US",
+      "noise": "street_15dB",
+      "codec": "pcm"
+    },
+    {
+      "file": "corpus/telephony/clip_001.wav",
+      "reference": "I would like to book a flight to New York",
+      "accent": "en-US",
+      "noise": "clean",
+      "codec": "g711"
+    },
+    {
+      "file": "corpus/telephony/clip_002.wav",
+      "reference": "What is the baggage allowance on economy class",
+      "accent": "en-US",
+      "noise": "clean",
+      "codec": "g711"
+    },
+    {
+      "file": "corpus/telephony/clip_003.wav",
+      "reference": "I need to cancel my reservation for next Monday",
+      "accent": "en-US",
+      "noise": "clean",
+      "codec": "g711"
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+# Secrets / environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.deepeval/
+
+# Virtual environment
+.venv/
+venv/
+
+# IDE / local tool config
+.idea/
+.vscode/
+.claude/settings.local.json
+.claude
+
+# OS
+.DS_Store
+
+# Test artifacts / generated reports (may include transcripts, audio)
+reports/
+*.wav
+*.mp3
+
+# Logs
+*.log

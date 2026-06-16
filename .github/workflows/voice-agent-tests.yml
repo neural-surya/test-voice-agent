@@ -1,0 +1,163 @@
+name: Voice Agent Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      skip_e2e:
+        description: Skip E2E tests (agent not running in CI)
+        required: false
+        default: "true"
+        type: choice
+        options: ["true", "false"]
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  unit-and-integration:
+    name: L1–L5 Unit & Integration Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install system deps (ffmpeg)
+        run: sudo apt-get install -y ffmpeg
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build audio corpus
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python corpus_builder.py
+
+      - name: L1 — STT transcription accuracy
+        env:
+          DEEPGRAM_API_KEY: ${{ secrets.DEEPGRAM_API_KEY }}
+        run: |
+          pytest test_l1_stt.py -v \
+            --json-report \
+            --json-report-file=reports/l1_stt.json
+
+      - name: L2 — NLU intent classification
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          pytest test_l2_nlu.py -v \
+            --json-report \
+            --json-report-file=reports/l2_nlu.json
+
+      - name: L3 — Agent orchestration & guardrails
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          pytest test_l3_orchestration.py -v \
+            --json-report \
+            --json-report-file=reports/l3_state.json
+
+      - name: L3 — PromptFoo guardrail eval
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          npx --yes promptfoo eval \
+            --config promptfoo.yaml \
+            --output reports/l3_promptfoo.json || true
+
+      - name: L4 — LLM response quality
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          pytest test_l4_llm.py -v \
+            --json-report \
+            --json-report-file=reports/l4_llm.json
+
+      - name: L5 — TTS output quality
+        env:
+          CARTESIA_API_KEY: ${{ secrets.CARTESIA_API_KEY }}
+          CARTESIA_VOICE_ID: ${{ secrets.CARTESIA_VOICE_ID }}
+          DEEPGRAM_API_KEY:  ${{ secrets.DEEPGRAM_API_KEY }}
+        run: |
+          pytest test_l5_tts.py -v \
+            --json-report \
+            --json-report-file=reports/l5_tts.json
+
+      - name: Generate HTML report
+        if: always()
+        run: python generate_report.py || true
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: voice-agent-test-reports
+          path: reports/
+
+  e2e:
+    name: E2E Conversation Tests
+    runs-on: ubuntu-latest
+    needs: unit-and-integration
+    if: ${{ github.event.inputs.skip_e2e != 'true' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Start voice agent (background)
+        env:
+          LIVEKIT_URL:        ${{ secrets.LIVEKIT_URL }}
+          LIVEKIT_API_KEY:    ${{ secrets.LIVEKIT_API_KEY }}
+          LIVEKIT_API_SECRET: ${{ secrets.LIVEKIT_API_SECRET }}
+          OPENAI_API_KEY:     ${{ secrets.OPENAI_API_KEY }}
+          DEEPGRAM_API_KEY:   ${{ secrets.DEEPGRAM_API_KEY }}
+          CARTESIA_API_KEY:   ${{ secrets.CARTESIA_API_KEY }}
+          CARTESIA_VOICE_ID:  ${{ secrets.CARTESIA_VOICE_ID }}
+        run: |
+          python agent.py dev &
+          echo $! > agent.pid
+          sleep 5  # give the agent time to register with LiveKit
+
+      - name: E2E — Full conversation scenarios
+        env:
+          LIVEKIT_URL:        ${{ secrets.LIVEKIT_URL }}
+          LIVEKIT_API_KEY:    ${{ secrets.LIVEKIT_API_KEY }}
+          LIVEKIT_API_SECRET: ${{ secrets.LIVEKIT_API_SECRET }}
+          OPENAI_API_KEY:     ${{ secrets.OPENAI_API_KEY }}
+          DEEPGRAM_API_KEY:   ${{ secrets.DEEPGRAM_API_KEY }}
+          CARTESIA_API_KEY:   ${{ secrets.CARTESIA_API_KEY }}
+          CARTESIA_VOICE_ID:  ${{ secrets.CARTESIA_VOICE_ID }}
+        run: |
+          pytest test_e2e.py -v \
+            --json-report \
+            --json-report-file=reports/e2e.json
+
+      - name: Stop voice agent
+        if: always()
+        run: kill $(cat agent.pid) || true
+
+      - name: Upload E2E reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-reports
+          path: reports/

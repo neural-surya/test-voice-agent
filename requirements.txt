@@ -1,0 +1,45 @@
+# LiveKit stack
+livekit-agents>=0.11.0
+livekit-plugins-openai>=0.10.0
+livekit-plugins-deepgram>=0.8.0
+livekit-plugins-cartesia>=0.5.0
+livekit-plugins-silero>=0.7.0
+livekit>=0.17.0
+
+# STT / Audio
+deepgram-sdk>=3.5.0
+jiwer>=3.0.4
+soundfile>=0.12.1
+ffmpeg-python>=0.2.0
+numpy>=1.26.4
+
+# NLU / LLM
+openai>=1.30.0
+scikit-learn>=1.4.2
+
+# TTS
+cartesia>=1.2.0
+
+# Evaluation
+ragas>=0.1.14
+deepeval>=0.21.73
+datasets>=2.20.0
+
+# Testing
+pytest>=8.2.0
+pytest-asyncio>=0.23.7
+pytest-json-report>=1.5.0
+
+# Reporting
+jinja2>=3.1.4
+
+# Utilities
+python-dotenv>=1.0.1
+
+# Dashboard UI
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+websockets>=12.0
+
+# Optional: UTMOS MOS predictor (install separately if pip install utmos fails)
+# utmos>=0.1.0

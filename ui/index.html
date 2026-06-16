@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voice Agent · Test Dashboard</title>
+<style>
+/* ── Reset & tokens ──────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:     #0B0D12;
+  --bg2:    #111420;
+  --bg3:    #181c2a;
+  --panel:  #1a1e2e;
+  --border: rgba(255,255,255,0.07);
+  --border2:rgba(255,255,255,0.13);
+  --text:   #e8eaf0;
+  --muted:  #7a7f9a;
+  --l1: #4F8EF7; --l2: #3DD68C; --l3: #F5A623;
+  --l4: #F06060; --l5: #E87DC8; --e2e:#7C6FF0;
+  --green: #3DD68C; --red: #F06060; --amber: #F5A623;
+  --mono: 'IBM Plex Mono', 'Fira Code', monospace;
+}
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif;
+       font-size: 14px; line-height: 1.6; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.header {
+  height: 56px; flex-shrink: 0;
+  display: flex; align-items: center; gap: 16px;
+  padding: 0 20px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  z-index: 10;
+}
+.header-logo { display: flex; align-items: center; gap: 10px; }
+.header-logo svg { width: 22px; height: 22px; color: var(--l1); }
+.header-title { font-size: 15px; font-weight: 600; color: #fff; letter-spacing: -0.3px; }
+.header-sub   { font-size: 11px; color: var(--muted); }
+.header-sep   { flex: 1; }
+.conn-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); transition: background .3s; flex-shrink: 0; }
+.conn-dot.on { background: var(--green); }
+.conn-label { font-size: 11px; color: var(--muted); }
+.e2e-toggle-wrap { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); }
+.toggle { width: 32px; height: 18px; background: var(--bg3); border: 1px solid var(--border2);
+          border-radius: 9px; cursor: pointer; position: relative; transition: background .2s; }
+.toggle.on { background: rgba(124,111,240,0.5); border-color: var(--e2e); }
+.toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px;
+                 background: #fff; border-radius: 50%; transition: left .2s; }
+.toggle.on::after { left: 16px; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px;
+       border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 500;
+       transition: all .15s; white-space: nowrap; }
+.btn-primary  { background: var(--l1); color: #fff; }
+.btn-primary:hover  { background: #6aa0ff; }
+.btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+.btn-secondary{ background: var(--panel); color: var(--text); border: 1px solid var(--border2); }
+.btn-secondary:hover { border-color: var(--muted); }
+.btn-danger   { background: rgba(240,96,96,0.15); color: var(--red); border: 1px solid rgba(240,96,96,0.3); }
+.btn-danger:hover { background: rgba(240,96,96,0.25); }
+.btn-sm { padding: 4px 10px; font-size: 11px; border-radius: 6px; }
+
+/* ── Body layout ─────────────────────────────────────────────────────────── */
+.body { flex: 1; display: flex; overflow: hidden; }
+
+/* ── Left sidebar ────────────────────────────────────────────────────────── */
+.sidebar {
+  width: 330px; flex-shrink: 0;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-summary {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
+}
+.stat-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 3px; }
+.stat-value { font-size: 20px; font-weight: 700; color: #fff; line-height: 1; }
+.stat-value.green { color: var(--green); }
+.stat-value.red   { color: var(--red); }
+.sidebar-layers { flex: 1; min-height: 0; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+
+/* ── Layer card ──────────────────────────────────────────────────────────── */
+.layer-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: border-color .2s;
+}
+.layer-card:hover { border-color: var(--border2); }
+.layer-card.running { border-color: rgba(79,142,247,0.3); }
+.layer-card.passed  { border-color: rgba(61,214,140,0.2); }
+.layer-card.failed  { border-color: rgba(240,96,96,0.2); }
+
+.layer-card-header {
+  display: flex; align-items: center; gap: 9px;
+  padding: 10px 12px 8px;
+  cursor: pointer;
+  user-select: none;
+}
+.layer-badge {
+  width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 9px; font-weight: 600;
+  border: 1px solid; letter-spacing: .02em;
+}
+.layer-name { flex: 1; font-size: 13px; font-weight: 500; color: #fff; line-height: 1.3; }
+.layer-name-sub { font-size: 10.5px; color: var(--muted); font-weight: 400; }
+
+.status-badge {
+  font-family: var(--mono); font-size: 9px; font-weight: 600;
+  letter-spacing: .08em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 4px;
+}
+.status-idle    { background: rgba(122,127,154,.12); color: var(--muted); }
+.status-running { background: rgba(79,142,247,.15);  color: var(--l1); }
+.status-passed  { background: rgba(61,214,140,.13);  color: var(--green); }
+.status-failed  { background: rgba(240,96,96,.13);   color: var(--red); }
+
+.layer-card-body { padding: 0 12px 10px; }
+.layer-desc { font-size: 11px; color: var(--muted); margin-bottom: 8px; line-height: 1.5; }
+
+.progress-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.progress-bar-bg { flex: 1; height: 3px; background: var(--border2); border-radius: 2px; }
+.progress-bar-fill { height: 100%; border-radius: 2px; transition: width .4s ease; width: 0%; }
+.progress-label { font-family: var(--mono); font-size: 10px; color: var(--muted); flex-shrink: 0; }
+
+.layer-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+
+/* Mini log inside card */
+.card-log {
+  background: #0d1017; border: 1px solid var(--border);
+  border-radius: 6px; margin-top: 8px;
+  max-height: 160px; overflow-y: auto; overflow-x: hidden;
+  font-family: var(--mono); font-size: 11px; line-height: 1.7;
+  white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word;
+  padding: 8px 10px; display: none;
+}
+.card-log.open { display: block; }
+
+/* ── Spinner ─────────────────────────────────────────────────────────────── */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner { width: 10px; height: 10px; border: 2px solid rgba(79,142,247,.3);
+           border-top-color: var(--l1); border-radius: 50%; animation: spin .7s linear infinite; }
+
+/* ── Right main panel ────────────────────────────────────────────────────── */
+.main-panel {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden;
+}
+.tab-bar {
+  display: flex; gap: 2px; padding: 10px 16px 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2); flex-shrink: 0;
+}
+.tab-btn {
+  padding: 7px 16px; border-radius: 7px 7px 0 0; border: none;
+  background: none; color: var(--muted); font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all .15s; position: relative; bottom: -1px;
+  border: 1px solid transparent;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { background: var(--bg); color: #fff; border-color: var(--border); border-bottom-color: var(--bg); }
+.tab-btn .tab-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block;
+                    margin-right: 6px; background: var(--muted); }
+.tab-btn.active .tab-dot { background: var(--l1); }
+.tab-btn[data-tab="e2e"] .tab-dot { background: var(--e2e); }
+
+.tab-panel { display: none; flex: 1; min-height: 0; overflow: hidden; flex-direction: column; }
+.tab-panel.active { display: flex; }
+
+/* ── Log feed ────────────────────────────────────────────────────────────── */
+.log-toolbar {
+  padding: 10px 16px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+  background: var(--bg);
+}
+.log-filter { display: flex; gap: 4px; }
+.filter-chip {
+  padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500;
+  cursor: pointer; border: 1px solid var(--border2); background: none;
+  color: var(--muted); transition: all .15s;
+}
+.filter-chip.on { color: #fff; }
+.log-stream {
+  flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px;
+  font-family: var(--mono); font-size: 12px; line-height: 1.8;
+  background: var(--bg);
+}
+.log-line { display: flex; gap: 10px; align-items: flex-start; }
+.log-line + .log-line { }
+.log-ts    { color: #3a3e54; flex-shrink: 0; font-size: 10.5px; padding-top: 1px; }
+.log-layer-tag {
+  font-size: 9.5px; font-weight: 600; padding: 1px 6px;
+  border-radius: 3px; flex-shrink: 0; margin-top: 1px;
+  font-family: var(--mono); letter-spacing: .05em;
+}
+.log-text { color: #abb2cc; flex: 1; word-break: break-all; }
+.log-text.pass    { color: var(--green); }
+.log-text.fail    { color: var(--red); }
+.log-text.warn    { color: var(--amber); }
+.log-text.section { color: #3a3e54; }
+
+/* ── E2E live panel ──────────────────────────────────────────────────────── */
+.e2e-panel { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+
+.e2e-scenarios {
+  display: flex; gap: 8px; padding: 14px 16px;
+  border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap;
+}
+.scenario-card {
+  flex: 1; min-width: 140px;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px;
+  transition: border-color .2s;
+}
+.scenario-card.active  { border-color: rgba(124,111,240,.5); }
+.scenario-card.done-ok { border-color: rgba(61,214,140,.3); }
+.scenario-card.done-fail{ border-color: rgba(240,96,96,.3); }
+.sc-name  { font-size: 11px; font-weight: 600; color: #fff; margin-bottom: 3px; }
+.sc-persona { font-size: 10px; color: var(--muted); line-height: 1.4; }
+.sc-status  { font-size: 10px; font-family: var(--mono); margin-top: 6px; color: var(--muted); }
+.sc-status.running { color: var(--l1); }
+.sc-status.passed  { color: var(--green); }
+.sc-status.failed  { color: var(--red); }
+
+.e2e-chat-wrap {
+  flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
+}
+.e2e-chat-header {
+  padding: 10px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+  display: flex; align-items: center; gap: 12px;
+}
+.e2e-chat-title { font-size: 13px; font-weight: 600; color: #fff; }
+.e2e-metrics { display: flex; gap: 10px; }
+.e2e-metric-pill {
+  font-family: var(--mono); font-size: 10px;
+  padding: 2px 8px; border-radius: 4px;
+  background: var(--panel); border: 1px solid var(--border2); color: var(--muted);
+}
+.e2e-chat {
+  flex: 1; min-height: 0; overflow-y: auto; padding: 16px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.chat-turn { display: flex; gap: 10px; align-items: flex-start; max-width: 75%; }
+.chat-turn.agent  { align-self: flex-start; }
+.chat-turn.caller { align-self: flex-end; flex-direction: row-reverse; }
+.chat-avatar {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+}
+.chat-turn.agent  .chat-avatar { background: rgba(79,142,247,.2);  color: var(--l1); }
+.chat-turn.caller .chat-avatar { background: rgba(124,111,240,.2); color: var(--e2e); }
+.chat-bubble {
+  padding: 9px 13px; border-radius: 12px; font-size: 13px; line-height: 1.6;
+  max-width: 100%;
+}
+.chat-turn.agent  .chat-bubble { background: var(--panel); border: 1px solid var(--border2); border-radius: 4px 12px 12px 12px; color: var(--text); }
+.chat-turn.caller .chat-bubble { background: rgba(124,111,240,.15); border: 1px solid rgba(124,111,240,.25); border-radius: 12px 4px 12px 12px; color: #d4d0ff; }
+.chat-role-label { font-size: 10px; color: var(--muted); margin-bottom: 3px; }
+
+.goal-banner {
+  margin: 8px 16px; padding: 10px 14px; border-radius: 8px;
+  font-size: 12px; font-weight: 500; text-align: center;
+  display: none;
+}
+.goal-banner.success { background: rgba(61,214,140,.1); border: 1px solid rgba(61,214,140,.25); color: var(--green); }
+.goal-banner.fail    { background: rgba(240,96,96,.1);  border: 1px solid rgba(240,96,96,.25);  color: var(--red); }
+
+/* ── Report tab ──────────────────────────────────────────────────────────── */
+.report-panel { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.report-toolbar { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; gap: 8px; flex-shrink: 0; background: var(--bg2); }
+.report-frame { flex: 1; border: none; background: var(--bg); }
+
+/* ── Toast ───────────────────────────────────────────────────────────────── */
+.toast {
+  position: fixed; bottom: 20px; right: 20px; z-index: 999;
+  background: var(--panel); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 12px 16px;
+  font-size: 13px; color: var(--text); box-shadow: 0 4px 24px rgba(0,0,0,.4);
+  transform: translateY(10px); opacity: 0;
+  transition: all .25s; pointer-events: none;
+}
+.toast.show { transform: none; opacity: 1; }
+
+/* ── Pulse animation for running cards ───────────────────────────────────── */
+@keyframes border-pulse {
+  0%, 100% { border-color: rgba(79,142,247,.15); }
+  50%       { border-color: rgba(79,142,247,.45); }
+}
+.layer-card.running { animation: border-pulse 1.5s ease-in-out infinite; }
+
+/* ── Typing indicator ────────────────────────────────────────────────────── */
+.typing { display: flex; gap: 4px; align-items: center; padding: 9px 13px;
+          background: var(--panel); border: 1px solid var(--border2); border-radius: 4px 12px 12px 12px;
+          width: fit-content; }
+.typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
+@keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-6px)} }
+.typing span:nth-child(1){animation:bounce 1.2s ease infinite .0s}
+.typing span:nth-child(2){animation:bounce 1.2s ease infinite .2s}
+.typing span:nth-child(3){animation:bounce 1.2s ease infinite .4s}
+</style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────────────── -->
+<header class="header">
+  <div class="header-logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+      <line x1="12" y1="19" x2="12" y2="22"/>
+      <line x1="8" y1="22" x2="16" y2="22"/>
+    </svg>
+    <div>
+      <div class="header-title">Voice Agent Tests</div>
+      <div class="header-sub">SkyWay Airlines · QA Dashboard</div>
+    </div>
+  </div>
+  <div class="header-sep"></div>
+  <div class="e2e-toggle-wrap">
+    <span>Include E2E</span>
+    <div class="toggle" id="e2eToggle" onclick="toggleE2E(this)" title="Include E2E in Run All"></div>
+  </div>
+  <button class="btn btn-primary" id="runAllBtn" onclick="runAll()">
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2l10 6-10 6V2z"/></svg>
+    Run All
+  </button>
+  <button class="btn btn-secondary" id="stopAllBtn" onclick="stopAll()" style="display:none">
+    ■ Stop
+  </button>
+  <button class="btn btn-secondary" onclick="generateReport()">📊 Report</button>
+  <div class="conn-dot" id="connDot"></div>
+  <span class="conn-label" id="connLabel">Connecting…</span>
+</header>
+
+<!-- ── Body ────────────────────────────────────────────────────────────────── -->
+<div class="body">
+
+  <!-- Left sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-summary">
+      <div class="stat-card">
+        <div class="stat-label">Layers</div>
+        <div class="stat-value" id="statLayers">0/6</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Tests</div>
+        <div class="stat-value" id="statTests">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Time</div>
+        <div class="stat-value" id="statTime">—</div>
+      </div>
+    </div>
+    <div class="sidebar-layers" id="layersList"></div>
+  </div>
+
+  <!-- Right main panel -->
+  <div class="main-panel">
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="log" onclick="switchTab('log',this)">
+        <span class="tab-dot"></span>Log Feed
+      </button>
+      <button class="tab-btn" data-tab="e2e" onclick="switchTab('e2e',this)" id="e2eTabBtn">
+        <span class="tab-dot" style="background:var(--e2e)"></span>E2E Live
+      </button>
+      <button class="tab-btn" data-tab="report" onclick="switchTab('report',this)">
+        <span class="tab-dot" style="background:var(--green)"></span>Report
+      </button>
+    </div>
+
+    <!-- Log feed tab -->
+    <div class="tab-panel active" id="tab-log">
+      <div class="log-toolbar">
+        <span style="font-size:12px;color:var(--muted)">Filter:</span>
+        <div class="log-filter">
+          <button class="filter-chip on" style="border-color:var(--green);color:var(--green)" onclick="toggleFilter(this,'pass')">✓ Pass</button>
+          <button class="filter-chip on" style="border-color:var(--red);color:var(--red)"   onclick="toggleFilter(this,'fail')">✗ Fail</button>
+          <button class="filter-chip on" onclick="toggleFilter(this,'info')">Info</button>
+          <button class="filter-chip on" style="border-color:var(--amber);color:var(--amber)" onclick="toggleFilter(this,'warn')">Warn</button>
+        </div>
+        <div style="flex:1"></div>
+        <button class="btn btn-secondary btn-sm" onclick="clearLog()">Clear</button>
+        <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);cursor:pointer">
+          <input type="checkbox" id="autoScroll" checked style="accent-color:var(--l1)"> Auto-scroll
+        </label>
+      </div>
+      <div class="log-stream" id="logStream"></div>
+    </div>
+
+    <!-- E2E live tab -->
+    <div class="tab-panel" id="tab-e2e">
+      <div class="e2e-panel">
+        <div class="e2e-scenarios" id="e2eScenarios">
+          <!-- Scenario cards injected by JS -->
+        </div>
+        <div class="e2e-chat-wrap">
+          <div class="e2e-chat-header">
+            <div class="e2e-chat-title" id="e2eChatTitle">Waiting for E2E to start…</div>
+            <div class="e2e-metrics">
+              <div class="e2e-metric-pill" id="e2eTurns">Turns: —</div>
+              <div class="e2e-metric-pill" id="e2eCompletion">Completed: 0/4</div>
+            </div>
+          </div>
+          <div class="goal-banner" id="goalBanner"></div>
+          <div class="e2e-chat" id="e2eChat">
+            <div style="margin:auto;text-align:center;color:var(--muted);font-size:13px">
+              Press <strong style="color:#fff">▶ Start E2E</strong> on the E2E card to begin a live conversation simulation.<br><br>
+              <span style="font-size:11px">Make sure <code style="background:var(--panel);padding:2px 6px;border-radius:4px">python agent.py dev</code> is running first.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Report tab -->
+    <div class="tab-panel" id="tab-report">
+      <div class="report-panel">
+        <div class="report-toolbar">
+          <button class="btn btn-secondary btn-sm" onclick="generateReport()">⟳ Regenerate</button>
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('reportFrame').src += ''">⟳ Refresh</button>
+          <span style="font-size:11px;color:var(--muted)" id="reportStatus">No report yet — generate one after running tests.</span>
+        </div>
+        <iframe class="report-frame" id="reportFrame" src="/report-content"></iframe>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── Config ──────────────────────────────────────────────────────────────── */
+const LAYER_CONFIG = {
+  l1:  { label:'L1',  name:'Audio / STT',       sub:'Transcription accuracy',         color:'#4F8EF7', desc:'WER < 8% · CER < 4% · 16 audio clips' },
+  l2:  { label:'L2',  name:'NLU / Intent',       sub:'Classification & slot filling',  color:'#3DD68C', desc:'Macro F1 > 0.90 · OOS detection > 90%' },
+  l3:  { label:'L3',  name:'Orchestration',      sub:'State transitions & guardrails', color:'#F5A623', desc:'9 transitions · Jailbreak rejection · Escalation recall' },
+  l4:  { label:'L4',  name:'LLM Response',       sub:'Faithfulness & tone',            color:'#F06060', desc:'RAGAS faithfulness > 0.85 · Hallucination < 5%' },
+  l5:  { label:'L5',  name:'TTS Output',         sub:'Naturalness & glitch detection', color:'#E87DC8', desc:'MOS > 4.0 · Zero audio glitches · Pronunciation check' },
+  e2e: { label:'E2E', name:'Full Conversation',  sub:'Simulated LLM caller',           color:'#7C6FF0', desc:'4 scenarios · Task completion > 85% · Avg turns < 6' },
+};
+
+const E2E_SCENARIOS_CONFIG = [
+  { id:'happy_path_booking',    name:'Happy Path',     persona:'Cooperative caller books a flight to London' },
+  { id:'interruption_mid_response', name:'Interruption', persona:'Impatient caller interrupts mid-sentence' },
+  { id:'escalation_flow',       name:'Escalation',     persona:'Angry caller demands a human agent' },
+  { id:'hold_and_resume',       name:'Hold & Resume',  persona:'Distracted caller with long pauses' },
+];
+
+/* ── State ───────────────────────────────────────────────────────────────── */
+const state = {};
+for (const id of Object.keys(LAYER_CONFIG)) {
+  state[id] = { status:'idle', passed:0, failed:0, total:0, duration:null };
+}
+
+let logFilters = new Set(['pass','fail','info','warn']);
+let ws = null;
+let sessionStart = null;
+let timerInterval = null;
+let includeE2E = false;
+let e2eTurnCount = 0;
+let e2eCompletedCount = 0;
+let currentScenario = null;
+
+/* ── WebSocket ───────────────────────────────────────────────────────────── */
+function connectWS() {
+  ws = new WebSocket(`ws://${location.host}/ws`);
+
+  ws.onopen = () => {
+    document.getElementById('connDot').classList.add('on');
+    document.getElementById('connLabel').textContent = 'Connected';
+    toast('Connected to server', 'green');
+  };
+
+  ws.onclose = () => {
+    document.getElementById('connDot').classList.remove('on');
+    document.getElementById('connLabel').textContent = 'Disconnected';
+    setTimeout(connectWS, 2000);
+  };
+
+  ws.onerror = () => {
+    document.getElementById('connLabel').textContent = 'Error';
+  };
+
+  ws.onmessage = (ev) => {
+    const msg = JSON.parse(ev.data);
+    handleMessage(msg);
+  };
+}
+
+function send(msg) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(msg));
+  }
+}
+
+/* ── Message handler ─────────────────────────────────────────────────────── */
+function handleMessage(msg) {
+  switch (msg.type) {
+    case 'status':
+      updateLayerStatus(msg.layer, msg.status);
+      break;
+    case 'log':
+      appendLog(msg);
+      appendCardLog(msg.layer, msg.text, msg.level);
+      break;
+    case 'done':
+      onLayerDone(msg);
+      break;
+    case 'e2e_scenario':
+      onE2EScenario(msg.name);
+      break;
+    case 'e2e_turn':
+      appendChatTurn(msg.role, msg.text);
+      break;
+    case 'e2e_goal':
+      onE2EGoal(msg.text);
+      break;
+    case 'e2e_metric':
+      appendLog({ layer:'e2e', text: msg.text, level:'info' });
+      break;
+    case 'all_done':
+      onAllDone();
+      break;
+    case 'report_ready':
+      onReportReady();
+      break;
+  }
+}
+
+/* ── Layer status updates ────────────────────────────────────────────────── */
+function updateLayerStatus(layerId, status) {
+  if (!state[layerId]) return;
+  state[layerId].status = status;
+
+  const card = document.getElementById(`card-${layerId}`);
+  if (!card) return;
+
+  card.className = `layer-card ${status}`;
+
+  const badge = card.querySelector('.status-badge');
+  badge.className = `status-badge status-${status}`;
+
+  const runBtn  = card.querySelector('.run-btn');
+  const stopBtn = card.querySelector('.stop-btn');
+  const spinner = card.querySelector('.card-spinner');
+
+  if (status === 'running') {
+    runBtn.style.display  = 'none';
+    stopBtn.style.display = 'inline-flex';
+    if (spinner) spinner.style.display = 'inline-block';
+    if (!sessionStart) { sessionStart = Date.now(); startTimer(); }
+    // Auto-switch E2E tab when E2E runs
+    if (layerId === 'e2e') {
+      switchTab('e2e', document.querySelector('.tab-btn[data-tab="e2e"]'));
+      toast('E2E started — watching live conversation', '#7C6FF0');
+    }
+  } else {
+    runBtn.style.display  = 'inline-flex';
+    stopBtn.style.display = 'none';
+    if (spinner) spinner.style.display = 'none';
+  }
+
+  const labels = { idle:'IDLE', running:'RUNNING', passed:'PASSED', failed:'FAILED' };
+  badge.textContent = labels[status] || status.toUpperCase();
+
+  updateSummary();
+}
+
+function onLayerDone(msg) {
+  const s = state[msg.layer];
+  s.status   = msg.status;
+  s.passed   = msg.passed;
+  s.failed   = msg.failed;
+  s.total    = msg.total;
+  s.duration = msg.duration;
+
+  updateLayerStatus(msg.layer, msg.status);
+
+  const card = document.getElementById(`card-${msg.layer}`);
+  if (card) {
+    const bar = card.querySelector('.progress-bar-fill');
+    if (bar && msg.total > 0) {
+      bar.style.width = `${(msg.passed / msg.total) * 100}%`;
+      bar.style.background = msg.status === 'passed' ? 'var(--green)' : 'var(--red)';
+    }
+    const label = card.querySelector('.progress-label');
+    if (label) label.textContent = `${msg.passed}/${msg.total}  ${msg.duration}s`;
+  }
+
+  updateSummary();
+  const icon = msg.status === 'passed' ? '✓' : '✗';
+  toast(`${icon} ${LAYER_CONFIG[msg.layer]?.label} ${msg.status.toUpperCase()} — ${msg.passed}/${msg.total} passed`,
+        msg.status === 'passed' ? 'green' : 'red');
+}
+
+function updateSummary() {
+  const layers = Object.keys(LAYER_CONFIG);
+  const passed = layers.filter(id => state[id].status === 'passed').length;
+  const failed = layers.filter(id => state[id].status === 'failed').length;
+  const totalTests = layers.reduce((s, id) => s + state[id].total, 0);
+
+  const el = document.getElementById('statLayers');
+  el.textContent = `${passed}/${layers.length}`;
+  el.className = 'stat-value' + (failed > 0 ? ' red' : passed > 0 ? ' green' : '');
+  document.getElementById('statTests').textContent = totalTests;
+
+  // Show/hide stop all button
+  const anyRunning = layers.some(id => state[id].status === 'running');
+  document.getElementById('stopAllBtn').style.display = anyRunning ? 'inline-flex' : 'none';
+  document.getElementById('runAllBtn').style.display  = anyRunning ? 'none' : 'inline-flex';
+}
+
+function onAllDone() {
+  stopTimer();
+  toast('All layers complete — generating report…');
+  setTimeout(() => generateReport(), 500);
+}
+
+/* ── Log feed ────────────────────────────────────────────────────────────── */
+function appendLog(msg) {
+  if (!logFilters.has(msg.level)) return;
+
+  const stream = document.getElementById('logStream');
+  const cfg    = LAYER_CONFIG[msg.layer];
+  const color  = cfg ? cfg.color : '#7a7f9a';
+  const ts     = new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.dataset.level = msg.level;
+  line.innerHTML = `
+    <span class="log-ts">${ts}</span>
+    ${cfg ? `<span class="log-layer-tag" style="background:${color}22;color:${color}">${cfg.label}</span>` : ''}
+    <span class="log-text ${msg.level}">${escHtml(msg.text)}</span>
+  `;
+  stream.appendChild(line);
+
+  const scroll = document.getElementById('autoScroll');
+  if (scroll && scroll.checked) {
+    stream.scrollTop = stream.scrollHeight;
+  }
+}
+
+function appendCardLog(layerId, text, level) {
+  const card = document.getElementById(`card-${layerId}`);
+  if (!card) return;
+  const cardLog = card.querySelector('.card-log');
+  if (!cardLog || !cardLog.classList.contains('open')) return;
+
+  const span = document.createElement('div');
+  span.className = `log-text ${level}`;
+  span.style.cssText = 'font-size:10.5px;line-height:1.7';
+  span.textContent = text;
+  cardLog.appendChild(span);
+
+  // Keep only last 40 lines
+  while (cardLog.children.length > 40) cardLog.removeChild(cardLog.firstChild);
+  cardLog.scrollTop = cardLog.scrollHeight;
+}
+
+function clearLog() { document.getElementById('logStream').innerHTML = ''; }
+
+function toggleFilter(btn, level) {
+  btn.classList.toggle('on');
+  if (logFilters.has(level)) logFilters.delete(level);
+  else logFilters.add(level);
+}
+
+/* ── E2E live ────────────────────────────────────────────────────────────── */
+function onE2EScenario(name) {
+  currentScenario = name;
+  e2eTurnCount = 0;
+  document.getElementById('e2eChatTitle').textContent = `Scenario: ${name}`;
+  document.getElementById('e2eTurns').textContent = 'Turns: 0';
+  document.getElementById('goalBanner').style.display = 'none';
+
+  // Clear previous turns (except the placeholder)
+  const chat = document.getElementById('e2eChat');
+  chat.innerHTML = '';
+
+  // Update scenario cards
+  const cards = document.querySelectorAll('.scenario-card');
+  cards.forEach(c => {
+    if (c.dataset.id === name) c.className = 'scenario-card active';
+  });
+
+  // Add typing indicator to show agent is about to speak
+  addTypingIndicator();
+}
+
+function addTypingIndicator() {
+  const chat = document.getElementById('e2eChat');
+  const existing = chat.querySelector('.typing-wrap');
+  if (existing) existing.remove();
+  const wrap = document.createElement('div');
+  wrap.className = 'chat-turn agent typing-wrap';
+  wrap.innerHTML = `
+    <div class="chat-avatar">A</div>
+    <div class="typing"><span></span><span></span><span></span></div>
+  `;
+  chat.appendChild(wrap);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function appendChatTurn(role, text) {
+  if (!text || !text.trim()) return;
+
+  const chat = document.getElementById('e2eChat');
+
+  // Remove typing indicator
+  const typing = chat.querySelector('.typing-wrap');
+  if (typing) typing.remove();
+
+  e2eTurnCount++;
+  document.getElementById('e2eTurns').textContent = `Turns: ${e2eTurnCount}`;
+
+  const turn = document.createElement('div');
+  turn.className = `chat-turn ${role}`;
+  const avatar = role === 'agent' ? 'A' : 'C';
+  const roleLabel = role === 'agent' ? 'Aria (Agent)' : 'Caller (Simulated)';
+
+  turn.innerHTML = `
+    <div class="chat-avatar">${avatar}</div>
+    <div>
+      <div class="chat-role-label">${roleLabel}</div>
+      <div class="chat-bubble">${escHtml(text)}</div>
+    </div>
+  `;
+  chat.appendChild(turn);
+  chat.scrollTop = chat.scrollHeight;
+
+  // Add typing indicator for next expected speaker
+  if (role === 'agent') {
+    // Caller will respond
+    setTimeout(addTypingIndicator, 200);
+  } else {
+    // Agent will respond
+    setTimeout(() => {
+      const ti = document.createElement('div');
+      ti.className = 'chat-turn agent typing-wrap';
+      ti.innerHTML = `<div class="chat-avatar">A</div><div class="typing"><span></span><span></span><span></span></div>`;
+      chat.appendChild(ti);
+      chat.scrollTop = chat.scrollHeight;
+    }, 200);
+  }
+}
+
+function onE2EGoal(text) {
+  const chat = document.getElementById('e2eChat');
+  const typing = chat.querySelector('.typing-wrap');
+  if (typing) typing.remove();
+
+  const banner = document.getElementById('goalBanner');
+  const lower  = text.toLowerCase();
+  const success = !lower.includes('not') && !lower.includes('fail');
+  banner.className = `goal-banner ${success ? 'success' : 'fail'}`;
+  banner.textContent = success ? `✓ Goal Complete — ${e2eTurnCount} turns` : `✗ Goal not completed after ${e2eTurnCount} turns`;
+  banner.style.display = 'block';
+
+  if (success) e2eCompletedCount++;
+  document.getElementById('e2eCompletion').textContent = `Completed: ${e2eCompletedCount}/4`;
+
+  // Update scenario card
+  const cards = document.querySelectorAll('.scenario-card');
+  cards.forEach(c => {
+    if (c.dataset.id === currentScenario) {
+      c.className = `scenario-card ${success ? 'done-ok' : 'done-fail'}`;
+      c.querySelector('.sc-status').textContent = success ? `✓ Done in ${e2eTurnCount} turns` : `✗ Failed`;
+      c.querySelector('.sc-status').className = `sc-status ${success ? 'passed' : 'failed'}`;
+    }
+  });
+}
+
+/* ── Actions ─────────────────────────────────────────────────────────────── */
+function runLayer(layerId) {
+  e2eTurnCount = 0;
+  if (layerId === 'e2e') {
+    e2eCompletedCount = 0;
+    document.getElementById('e2eChat').innerHTML = '';
+    document.getElementById('goalBanner').style.display = 'none';
+    // Reset scenario cards
+    document.querySelectorAll('.scenario-card').forEach(c => {
+      c.className = 'scenario-card';
+      c.querySelector('.sc-status').textContent = 'Pending';
+      c.querySelector('.sc-status').className = 'sc-status';
+    });
+  }
+  send({ action:'run', layer:layerId });
+}
+
+function stopLayer(layerId) { send({ action:'stop', layer:layerId }); }
+
+function runAll() {
+  if (!sessionStart) { sessionStart = Date.now(); startTimer(); }
+  send({ action:'run', layer:'all', include_e2e: includeE2E });
+}
+
+function stopAll() { send({ action:'stop', layer:'all' }); stopTimer(); }
+
+function generateReport() {
+  send({ action:'generate_report' });
+  toast('Generating report…');
+}
+
+function onReportReady() {
+  const frame = document.getElementById('reportFrame');
+  frame.src = '/report-content?' + Date.now();
+  document.getElementById('reportStatus').textContent = 'Report ready — updated ' + new Date().toLocaleTimeString();
+  toast('Report generated — view in Report tab', 'green');
+  switchTab('report', document.querySelector('.tab-btn[data-tab="report"]'));
+}
+
+function toggleE2E(el) {
+  el.classList.toggle('on');
+  includeE2E = el.classList.contains('on');
+}
+
+/* ── UI helpers ──────────────────────────────────────────────────────────── */
+function switchTab(tabId, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`tab-${tabId}`)?.classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+function toggleCardLog(layerId) {
+  const card = document.getElementById(`card-${layerId}`);
+  const log  = card.querySelector('.card-log');
+  log.classList.toggle('open');
+  const chevron = card.querySelector('.chevron');
+  if (chevron) chevron.style.transform = log.classList.contains('open') ? 'rotate(180deg)' : '';
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let toastTimer = null;
+function toast(msg, color) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.borderLeftColor = color === 'green' ? 'var(--green)' : color === 'red' ? 'var(--red)' : color || 'var(--l1)';
+  el.style.borderLeftWidth = '3px';
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+function startTimer() {
+  timerInterval = setInterval(() => {
+    const elapsed = Math.round((Date.now() - sessionStart) / 1000);
+    const m = Math.floor(elapsed / 60), s = elapsed % 60;
+    document.getElementById('statTime').textContent = m > 0 ? `${m}m ${s}s` : `${s}s`;
+  }, 1000);
+}
+
+function stopTimer() { clearInterval(timerInterval); timerInterval = null; }
+
+/* ── Build UI from config ────────────────────────────────────────────────── */
+function buildLayerCards() {
+  const container = document.getElementById('layersList');
+  for (const [id, cfg] of Object.entries(LAYER_CONFIG)) {
+    const isE2E = id === 'e2e';
+    const card = document.createElement('div');
+    card.className = 'layer-card';
+    card.id = `card-${id}`;
+
+    card.innerHTML = `
+      <div class="layer-card-header" onclick="toggleCardLog('${id}')">
+        <div class="layer-badge" style="background:${cfg.color}18;border-color:${cfg.color}40;color:${cfg.color}">
+          ${cfg.label}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div class="layer-name">${cfg.name}</div>
+          <div class="layer-name-sub">${cfg.sub}</div>
+        </div>
+        <span class="status-badge status-idle">IDLE</span>
+        <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="var(--muted)" stroke-width="1.5" style="transition:transform .2s;flex-shrink:0"><polyline points="2,4 6,8 10,4"/></svg>
+      </div>
+      <div class="layer-card-body">
+        <div class="layer-desc">${cfg.desc}</div>
+        <div class="progress-row">
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" style="background:${cfg.color}"></div>
+          </div>
+          <div class="progress-label">0/0</div>
+        </div>
+        <div class="layer-actions">
+          <button class="btn btn-secondary btn-sm run-btn" onclick="event.stopPropagation();runLayer('${id}')">
+            <svg width="9" height="9" viewBox="0 0 12 12" fill="currentColor"><path d="M2 1l9 5-9 5V1z"/></svg>
+            ${isE2E ? 'Start E2E' : 'Run'}
+          </button>
+          <button class="btn btn-danger btn-sm stop-btn" style="display:none" onclick="event.stopPropagation();stopLayer('${id}')">
+            ■ Stop
+          </button>
+          <div class="spinner card-spinner" style="display:none"></div>
+        </div>
+        <div class="card-log"></div>
+      </div>
+    `;
+    container.appendChild(card);
+  }
+}
+
+function buildE2EScenarioCards() {
+  const container = document.getElementById('e2eScenarios');
+  for (const sc of E2E_SCENARIOS_CONFIG) {
+    const card = document.createElement('div');
+    card.className = 'scenario-card';
+    card.dataset.id = sc.id;
+    card.innerHTML = `
+      <div class="sc-name">${sc.name}</div>
+      <div class="sc-persona">${sc.persona}</div>
+      <div class="sc-status">Pending</div>
+    `;
+    container.appendChild(card);
+  }
+}
+
+/* ── Init ────────────────────────────────────────────────────────────────── */
+buildLayerCards();
+buildE2EScenarioCards();
+connectWS();
+</script>
+</body>
+</html>
