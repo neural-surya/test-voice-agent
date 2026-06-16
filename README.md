@@ -135,3 +135,6 @@ and leave it running while you trigger E2E from the dashboard.
   if you add new network calls there, give them a timeout too).
 - Repeated `ignoring byte stream with topic 'lk.agent.session', no callback attached`
   log lines are normal LiveKit SDK noise, not an error.
+
+  <img width="1713" height="904" alt="voice_agent" src="https://github.com/user-attachments/assets/d221a483-bf47-42b3-a3ea-cbbb2dcc5e6b" />
+
