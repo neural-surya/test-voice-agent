@@ -86,6 +86,7 @@ async def test_e2e_scenario(scenario):
     """
     from e2e.caller_bot import run_e2e_scenario
 
+    print(f"\n── Starting scenario: {scenario['name']} ──", flush=True)
     result = await run_e2e_scenario(scenario)
 
     _print_transcript(result["transcript"], scenario["name"])

@@ -87,7 +87,7 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, -apple
 .stat-value { font-size: 20px; font-weight: 700; color: #fff; line-height: 1; }
 .stat-value.green { color: var(--green); }
 .stat-value.red   { color: var(--red); }
-.sidebar-layers { flex: 1; min-height: 0; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+.sidebar-layers { flex: 1; min-height: 0; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
 
 /* ── Layer card ──────────────────────────────────────────────────────────── */
 .layer-card {
@@ -96,6 +96,9 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, -apple
   border-radius: 10px;
   overflow: hidden;
   transition: border-color .2s;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 .layer-card:hover { border-color: var(--border2); }
 .layer-card.running { border-color: rgba(79,142,247,0.3); }
@@ -114,8 +117,10 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, -apple
   font-family: var(--mono); font-size: 9px; font-weight: 600;
   border: 1px solid; letter-spacing: .02em;
 }
-.layer-name { flex: 1; font-size: 13px; font-weight: 500; color: #fff; line-height: 1.3; }
-.layer-name-sub { font-size: 10.5px; color: var(--muted); font-weight: 400; }
+.layer-name { flex: 1; font-size: 13px; font-weight: 500; color: #fff; line-height: 1.3;
+              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.layer-name-sub { font-size: 10.5px; color: var(--muted); font-weight: 400;
+                  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .status-badge {
   font-family: var(--mono); font-size: 9px; font-weight: 600;
@@ -127,15 +132,25 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, -apple
 .status-passed  { background: rgba(61,214,140,.13);  color: var(--green); }
 .status-failed  { background: rgba(240,96,96,.13);   color: var(--red); }
 
-.layer-card-body { padding: 0 12px 10px; }
-.layer-desc { font-size: 11px; color: var(--muted); margin-bottom: 8px; line-height: 1.5; }
+.layer-card-body { padding: 0 12px 10px; flex: 1; display: flex; flex-direction: column; justify-content: flex-end; }
+.layer-desc { font-size: 11px; color: var(--muted); margin-bottom: 8px; line-height: 1.5;
+              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .progress-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .progress-bar-bg { flex: 1; height: 3px; background: var(--border2); border-radius: 2px; }
 .progress-bar-fill { height: 100%; border-radius: 2px; transition: width .4s ease; width: 0%; }
 .progress-label { font-family: var(--mono); font-size: 10px; color: var(--muted); flex-shrink: 0; }
 
-.layer-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+/* play/stop icon button in card header */
+.layer-play-btn {
+  width: 26px; height: 26px; border-radius: 50%; border: none; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: background .15s, color .15s;
+  background: rgba(79,142,247,0.12); color: var(--l1);
+}
+.layer-play-btn:hover { background: rgba(79,142,247,0.28); }
+.layer-play-btn.running { background: rgba(240,96,96,0.12); color: var(--red); }
+.layer-play-btn.running:hover { background: rgba(240,96,96,0.28); }
 
 /* Mini log inside card */
 .card-log {
@@ -147,6 +162,32 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, -apple
   padding: 8px 10px; display: none;
 }
 .card-log.open { display: block; }
+
+/* ── Process status panel ────────────────────────────────────────────────── */
+.sidebar-processes {
+  padding: 8px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.process-row {
+  display: flex; align-items: center; gap: 7px;
+  padding: 5px 8px; border-radius: 7px;
+  background: var(--bg3); border: 1px solid var(--border);
+}
+.process-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  background: var(--muted); transition: background .3s;
+}
+.process-dot.running { background: var(--green); animation: dot-blink 1.8s ease-in-out infinite; }
+.process-name { font-size: 11px; font-weight: 500; color: var(--text); flex: 1; }
+.process-pid  { font-size: 10px; font-family: var(--mono); color: var(--muted); }
+.process-btn {
+  padding: 2px 9px; border-radius: 4px; border: 1px solid; font-size: 10px;
+  font-weight: 600; cursor: pointer; background: none; transition: background .15s; white-space: nowrap;
+}
+.process-btn.kill  { border-color: rgba(240,96,96,.45); color: var(--red); }
+.process-btn.kill:hover  { background: rgba(240,96,96,.14); }
+.process-btn.start { border-color: rgba(61,214,140,.45); color: var(--green); }
+.process-btn.start:hover { background: rgba(61,214,140,.14); }
 
 /* ── Spinner ─────────────────────────────────────────────────────────────── */
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -218,20 +259,33 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, -apple
   border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap;
 }
 .scenario-card {
-  flex: 1; min-width: 140px;
+  flex: 1; min-width: 130px;
   background: var(--panel); border: 1px solid var(--border);
   border-radius: 8px; padding: 10px 12px;
-  transition: border-color .2s;
+  transition: background .2s, border-color .2s;
 }
-.scenario-card.active  { border-color: rgba(124,111,240,.5); }
-.scenario-card.done-ok { border-color: rgba(61,214,140,.3); }
-.scenario-card.done-fail{ border-color: rgba(240,96,96,.3); }
-.sc-name  { font-size: 11px; font-weight: 600; color: #fff; margin-bottom: 3px; }
+.scenario-card.active   { border-color: rgba(79,142,247,.7);  background: rgba(79,142,247,.06);  animation: sc-pulse 1.5s ease-in-out infinite; }
+.scenario-card.done-ok  { border-color: rgba(61,214,140,.7);  background: rgba(61,214,140,.07); }
+.scenario-card.done-fail{ border-color: rgba(240,96,96,.7);   background: rgba(240,96,96,.07); }
+@keyframes sc-pulse {
+  0%,100% { border-color: rgba(79,142,247,.4); }
+  50%      { border-color: rgba(79,142,247,.9); }
+}
+.sc-header { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+.sc-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  background: var(--muted); transition: background .2s;
+}
+.scenario-card.active    .sc-dot { background: var(--l1); animation: dot-blink 1s ease-in-out infinite; }
+.scenario-card.done-ok   .sc-dot { background: var(--green); }
+.scenario-card.done-fail .sc-dot { background: var(--red); }
+@keyframes dot-blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+.sc-name  { font-size: 11px; font-weight: 600; color: #fff; }
 .sc-persona { font-size: 10px; color: var(--muted); line-height: 1.4; }
 .sc-status  { font-size: 10px; font-family: var(--mono); margin-top: 6px; color: var(--muted); }
-.sc-status.running { color: var(--l1); }
-.sc-status.passed  { color: var(--green); }
-.sc-status.failed  { color: var(--red); }
+.sc-status.running { color: var(--l1); font-weight: 600; }
+.sc-status.passed  { color: var(--green); font-weight: 600; }
+.sc-status.failed  { color: var(--red);   font-weight: 600; }
 
 .e2e-chat-wrap {
   flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
@@ -340,6 +394,7 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, -apple
     ■ Stop
   </button>
   <button class="btn btn-secondary" onclick="generateReport()">📊 Report</button>
+  <button class="btn btn-secondary" onclick="resetDashboard()" title="Clear saved results and reset all counters" style="color:var(--muted)">↺ Reset</button>
   <div class="conn-dot" id="connDot"></div>
   <span class="conn-label" id="connLabel">Connecting…</span>
 </header>
@@ -363,6 +418,23 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, -apple
         <div class="stat-value" id="statTime">—</div>
       </div>
     </div>
+
+    <!-- Process status rows -->
+    <div class="sidebar-processes">
+      <div class="process-row">
+        <div class="process-dot" id="agentDot"></div>
+        <span class="process-name">Agent Worker</span>
+        <span class="process-pid" id="agentPid">—</span>
+        <button class="process-btn start" id="agentBtn" onclick="toggleAgent()">▶ Start</button>
+      </div>
+      <div class="process-row">
+        <div class="process-dot" id="e2eProcDot"></div>
+        <span class="process-name">E2E Test Run</span>
+        <span class="process-pid" id="e2eProcStatus">Idle</span>
+        <button class="process-btn kill" id="e2eKillBtn" style="display:none" onclick="stopLayer('e2e')">⏹ Kill</button>
+      </div>
+    </div>
+
     <div class="sidebar-layers" id="layersList"></div>
   </div>
 
@@ -461,9 +533,112 @@ const E2E_SCENARIOS_CONFIG = [
 ];
 
 /* ── State ───────────────────────────────────────────────────────────────── */
+const STORAGE_KEY = 'vat_dash_v1';
+
 const state = {};
 for (const id of Object.keys(LAYER_CONFIG)) {
   state[id] = { status:'idle', passed:0, failed:0, total:0, duration:null };
+}
+
+function persistState() {
+  try {
+    const snap = {
+      layers: {},
+      scenarios: {},
+      e2eCompleted: e2eCompletedCount,
+    };
+    for (const [id, s] of Object.entries(state)) {
+      if (s.total > 0 || (s.status !== 'idle' && s.status !== 'running')) {
+        snap.layers[id] = { ...s, status: s.status === 'running' ? 'idle' : s.status };
+      }
+    }
+    document.querySelectorAll('.scenario-card').forEach(c => {
+      const cls = c.className;
+      const passed = cls.includes('done-ok');
+      const failed = cls.includes('done-fail');
+      if (passed || failed) {
+        const st = c.querySelector('.sc-status');
+        snap.scenarios[c.dataset.id] = {
+          outcome: passed ? 'passed' : 'failed',
+          text: st ? st.textContent : '',
+        };
+      }
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(snap));
+  } catch(_) {}
+}
+
+function restoreState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const snap = JSON.parse(raw);
+
+    // Restore layer cards
+    for (const [id, s] of Object.entries(snap.layers || {})) {
+      if (!state[id]) continue;
+      Object.assign(state[id], s);
+      const card = document.getElementById(`card-${id}`);
+      if (!card) continue;
+      card.className = `layer-card ${s.status}`;
+      const badge = card.querySelector('.status-badge');
+      const labels = { idle:'IDLE', passed:'PASSED', failed:'FAILED' };
+      if (badge) { badge.className = `status-badge status-${s.status}`; badge.textContent = labels[s.status] || s.status.toUpperCase(); }
+      const playBtn = card.querySelector('.layer-play-btn');
+      if (playBtn) { playBtn.classList.remove('running'); playBtn.title = 'Run'; playBtn.innerHTML = `<svg width="10" height="10" viewBox="0 0 12 12" fill="currentColor"><path d="M2 1l9 5-9 5V1z"/></svg>`; }
+      const bar = card.querySelector('.progress-bar-fill');
+      if (bar && s.total > 0) { bar.style.width = `${(s.passed/s.total)*100}%`; bar.style.background = s.status === 'passed' ? 'var(--green)' : 'var(--red)'; }
+      const lbl = card.querySelector('.progress-label');
+      if (lbl && s.total > 0) lbl.textContent = `${s.passed}/${s.total}${s.duration ? '  '+s.duration+'s' : ''}`;
+    }
+
+    // Restore E2E scenario cards
+    e2eCompletedCount = snap.e2eCompleted || 0;
+    document.getElementById('e2eCompletion').textContent = `Completed: ${e2eCompletedCount}/4`;
+    for (const [id, sc] of Object.entries(snap.scenarios || {})) {
+      const card = document.querySelector(`.scenario-card[data-id="${id}"]`);
+      if (!card) continue;
+      const ok = sc.outcome === 'passed';
+      card.className = `scenario-card ${ok ? 'done-ok' : 'done-fail'}`;
+      const st = card.querySelector('.sc-status');
+      if (st) { st.textContent = sc.text; st.className = `sc-status ${ok ? 'passed' : 'failed'}`; }
+    }
+
+    updateSummary();
+  } catch(_) {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+}
+
+function resetDashboard() {
+  localStorage.removeItem(STORAGE_KEY);
+  for (const id of Object.keys(state)) {
+    state[id] = { status:'idle', passed:0, failed:0, total:0, duration:null };
+    const card = document.getElementById(`card-${id}`);
+    if (!card) continue;
+    card.className = 'layer-card';
+    const badge = card.querySelector('.status-badge');
+    if (badge) { badge.className = 'status-badge status-idle'; badge.textContent = 'IDLE'; }
+    const bar = card.querySelector('.progress-bar-fill');
+    if (bar) { bar.style.width = '0%'; bar.style.background = ''; }
+    const lbl = card.querySelector('.progress-label');
+    if (lbl) lbl.textContent = '0/0';
+  }
+  e2eCompletedCount = 0;
+  e2eTurnCount = 0;
+  currentScenario = null;
+  document.getElementById('e2eCompletion').textContent = 'Completed: 0/4';
+  document.getElementById('e2eTurns').textContent = 'Turns: —';
+  document.getElementById('e2eChatTitle').textContent = 'Waiting for E2E to start…';
+  document.getElementById('goalBanner').style.display = 'none';
+  document.getElementById('statTime').textContent = '—';
+  document.querySelectorAll('.scenario-card').forEach(c => {
+    c.className = 'scenario-card';
+    const st = c.querySelector('.sc-status');
+    if (st) { st.textContent = 'Pending'; st.className = 'sc-status'; }
+  });
+  updateSummary();
+  toast('Dashboard reset', 'var(--muted)');
 }
 
 let logFilters = new Set(['pass','fail','info','warn']);
@@ -527,7 +702,7 @@ function handleMessage(msg) {
       appendChatTurn(msg.role, msg.text);
       break;
     case 'e2e_goal':
-      onE2EGoal(msg.text);
+      onE2EGoal(msg);
       break;
     case 'e2e_metric':
       appendLog({ layer:'e2e', text: msg.text, level:'info' });
@@ -535,9 +710,36 @@ function handleMessage(msg) {
     case 'all_done':
       onAllDone();
       break;
+    case 'agent_status':
+      onAgentStatus(msg.running, msg.pid);
+      break;
     case 'report_ready':
       onReportReady();
       break;
+  }
+}
+
+function onAgentStatus(running, pid) {
+  const dot = document.getElementById('agentDot');
+  const pidEl = document.getElementById('agentPid');
+  const btn = document.getElementById('agentBtn');
+  dot.className = `process-dot ${running ? 'running' : ''}`;
+  pidEl.textContent = running ? (pid ? `PID ${pid}` : 'Running') : 'Stopped';
+  if (running) {
+    btn.className = 'process-btn kill';
+    btn.textContent = '⏹ Kill';
+  } else {
+    btn.className = 'process-btn start';
+    btn.textContent = '▶ Start';
+  }
+}
+
+function toggleAgent() {
+  const btn = document.getElementById('agentBtn');
+  if (btn.classList.contains('kill')) {
+    send({ action: 'kill_agent' });
+  } else {
+    send({ action: 'start_agent' });
   }
 }
 
@@ -554,28 +756,42 @@ function updateLayerStatus(layerId, status) {
   const badge = card.querySelector('.status-badge');
   badge.className = `status-badge status-${status}`;
 
-  const runBtn  = card.querySelector('.run-btn');
-  const stopBtn = card.querySelector('.stop-btn');
-  const spinner = card.querySelector('.card-spinner');
-
-  if (status === 'running') {
-    runBtn.style.display  = 'none';
-    stopBtn.style.display = 'inline-flex';
-    if (spinner) spinner.style.display = 'inline-block';
-    if (!sessionStart) { sessionStart = Date.now(); startTimer(); }
-    // Auto-switch E2E tab when E2E runs
-    if (layerId === 'e2e') {
-      switchTab('e2e', document.querySelector('.tab-btn[data-tab="e2e"]'));
-      toast('E2E started — watching live conversation', '#7C6FF0');
+  const playBtn = card.querySelector('.layer-play-btn');
+  if (playBtn) {
+    if (status === 'running') {
+      playBtn.classList.add('running');
+      playBtn.title = 'Stop';
+      playBtn.innerHTML = `<svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor"><rect x="1" y="1" width="3" height="8" rx="1"/><rect x="6" y="1" width="3" height="8" rx="1"/></svg>`;
+      if (!sessionStart) { sessionStart = Date.now(); startTimer(); }
+      if (layerId === 'e2e') {
+        switchTab('e2e', document.querySelector('.tab-btn[data-tab="e2e"]'));
+        toast('E2E started — watching live conversation', '#7C6FF0');
+      }
+    } else {
+      playBtn.classList.remove('running');
+      playBtn.title = 'Run';
+      playBtn.innerHTML = `<svg width="10" height="10" viewBox="0 0 12 12" fill="currentColor"><path d="M2 1l9 5-9 5V1z"/></svg>`;
     }
-  } else {
-    runBtn.style.display  = 'inline-flex';
-    stopBtn.style.display = 'none';
-    if (spinner) spinner.style.display = 'none';
   }
 
   const labels = { idle:'IDLE', running:'RUNNING', passed:'PASSED', failed:'FAILED' };
   badge.textContent = labels[status] || status.toUpperCase();
+
+  // Keep the E2E process row in sync
+  if (layerId === 'e2e') {
+    const dot    = document.getElementById('e2eProcDot');
+    const st     = document.getElementById('e2eProcStatus');
+    const killBtn= document.getElementById('e2eKillBtn');
+    if (status === 'running') {
+      dot.className = 'process-dot running';
+      st.textContent = 'Running…';
+      killBtn.style.display = 'inline-block';
+    } else {
+      dot.className = 'process-dot';
+      st.textContent = 'Idle';
+      killBtn.style.display = 'none';
+    }
+  }
 
   updateSummary();
 }
@@ -602,6 +818,7 @@ function onLayerDone(msg) {
   }
 
   updateSummary();
+  persistState();
   const icon = msg.status === 'passed' ? '✓' : '✗';
   toast(`${icon} ${LAYER_CONFIG[msg.layer]?.label} ${msg.status.toUpperCase()} — ${msg.passed}/${msg.total} passed`,
         msg.status === 'passed' ? 'green' : 'red');
@@ -684,21 +901,43 @@ function toggleFilter(btn, level) {
 function onE2EScenario(name) {
   currentScenario = name;
   e2eTurnCount = 0;
-  document.getElementById('e2eChatTitle').textContent = `Scenario: ${name}`;
+
+  const cfg = E2E_SCENARIOS_CONFIG.find(s => s.id === name);
+  const displayName = cfg ? cfg.name : name;
+
+  document.getElementById('e2eChatTitle').textContent = `Now running: ${displayName}`;
   document.getElementById('e2eTurns').textContent = 'Turns: 0';
   document.getElementById('goalBanner').style.display = 'none';
 
-  // Clear previous turns (except the placeholder)
-  const chat = document.getElementById('e2eChat');
-  chat.innerHTML = '';
+  document.getElementById('e2eChat').innerHTML = '';
 
-  // Update scenario cards
-  const cards = document.querySelectorAll('.scenario-card');
-  cards.forEach(c => {
-    if (c.dataset.id === name) c.className = 'scenario-card active';
-  });
+  const targetCard = document.querySelector(`.scenario-card[data-id="${name}"]`);
 
-  // Add typing indicator to show agent is about to speak
+  // If this scenario already ran (done-ok/done-fail), it's a new sweep — reset all to pending
+  if (targetCard && (targetCard.className.includes('done-ok') || targetCard.className.includes('done-fail'))) {
+    document.querySelectorAll('.scenario-card').forEach(c => {
+      c.className = 'scenario-card';
+      const st = c.querySelector('.sc-status');
+      if (st) { st.textContent = 'Pending'; st.className = 'sc-status'; }
+    });
+  } else {
+    // Finalize any card that got stuck as "active" (goal event missed)
+    document.querySelectorAll('.scenario-card.active').forEach(c => {
+      if (c.dataset.id !== name) {
+        c.className = 'scenario-card done-fail';
+        const st = c.querySelector('.sc-status');
+        if (st) { st.textContent = '✗ no result'; st.className = 'sc-status failed'; }
+      }
+    });
+  }
+
+  // Mark the new scenario as active
+  if (targetCard) {
+    targetCard.className = 'scenario-card active';
+    const st = targetCard.querySelector('.sc-status');
+    if (st) { st.textContent = '● RUNNING'; st.className = 'sc-status running'; }
+  }
+
   addTypingIndicator();
 }
 
@@ -759,30 +998,44 @@ function appendChatTurn(role, text) {
   }
 }
 
-function onE2EGoal(text) {
+function onE2EGoal(msg) {
+  // msg has: success (bool), scenario (id string), turns (int), text (raw log line)
+  const success      = typeof msg.success === 'boolean' ? msg.success : !msg.text.toLowerCase().includes('goal=false');
+  const scenarioId   = msg.scenario || currentScenario;
+  const turns        = msg.turns    || e2eTurnCount;
+
   const chat = document.getElementById('e2eChat');
   const typing = chat.querySelector('.typing-wrap');
   if (typing) typing.remove();
 
+  const cfg = E2E_SCENARIOS_CONFIG.find(s => s.id === scenarioId);
+  const displayName = cfg ? cfg.name : scenarioId;
+
+  document.getElementById('e2eChatTitle').textContent =
+    success ? `✓ ${displayName} — passed` : `✗ ${displayName} — failed`;
+
   const banner = document.getElementById('goalBanner');
-  const lower  = text.toLowerCase();
-  const success = !lower.includes('not') && !lower.includes('fail');
   banner.className = `goal-banner ${success ? 'success' : 'fail'}`;
-  banner.textContent = success ? `✓ Goal Complete — ${e2eTurnCount} turns` : `✗ Goal not completed after ${e2eTurnCount} turns`;
+  banner.textContent = success
+    ? `✓ Goal complete — ${turns} turn${turns !== 1 ? 's' : ''}`
+    : `✗ Goal not completed after ${turns} turn${turns !== 1 ? 's' : ''}`;
   banner.style.display = 'block';
 
   if (success) e2eCompletedCount++;
   document.getElementById('e2eCompletion').textContent = `Completed: ${e2eCompletedCount}/4`;
 
-  // Update scenario card
-  const cards = document.querySelectorAll('.scenario-card');
-  cards.forEach(c => {
-    if (c.dataset.id === currentScenario) {
+  // Mark the correct scenario card green or red
+  document.querySelectorAll('.scenario-card').forEach(c => {
+    if (c.dataset.id === scenarioId) {
       c.className = `scenario-card ${success ? 'done-ok' : 'done-fail'}`;
-      c.querySelector('.sc-status').textContent = success ? `✓ Done in ${e2eTurnCount} turns` : `✗ Failed`;
-      c.querySelector('.sc-status').className = `sc-status ${success ? 'passed' : 'failed'}`;
+      const st = c.querySelector('.sc-status');
+      if (st) {
+        st.textContent = success ? `✓ ${turns} turns` : `✗ Failed`;
+        st.className   = `sc-status ${success ? 'passed' : 'failed'}`;
+      }
     }
   });
+  persistState();
 }
 
 /* ── Actions ─────────────────────────────────────────────────────────────── */
@@ -803,6 +1056,14 @@ function runLayer(layerId) {
 }
 
 function stopLayer(layerId) { send({ action:'stop', layer:layerId }); }
+
+function toggleRunStop(layerId) {
+  if (state[layerId] && state[layerId].status === 'running') {
+    stopLayer(layerId);
+  } else {
+    runLayer(layerId);
+  }
+}
 
 function runAll() {
   if (!sessionStart) { sessionStart = Date.now(); startTimer(); }
@@ -884,10 +1145,13 @@ function buildLayerCards() {
         <div class="layer-badge" style="background:${cfg.color}18;border-color:${cfg.color}40;color:${cfg.color}">
           ${cfg.label}
         </div>
-        <div style="flex:1;min-width:0">
+        <div style="flex:1;min-width:0;overflow:hidden">
           <div class="layer-name">${cfg.name}</div>
           <div class="layer-name-sub">${cfg.sub}</div>
         </div>
+        <button class="layer-play-btn" title="Run" onclick="event.stopPropagation();toggleRunStop('${id}')">
+          <svg width="10" height="10" viewBox="0 0 12 12" fill="currentColor"><path d="M2 1l9 5-9 5V1z"/></svg>
+        </button>
         <span class="status-badge status-idle">IDLE</span>
         <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="var(--muted)" stroke-width="1.5" style="transition:transform .2s;flex-shrink:0"><polyline points="2,4 6,8 10,4"/></svg>
       </div>
@@ -898,16 +1162,6 @@ function buildLayerCards() {
             <div class="progress-bar-fill" style="background:${cfg.color}"></div>
           </div>
           <div class="progress-label">0/0</div>
-        </div>
-        <div class="layer-actions">
-          <button class="btn btn-secondary btn-sm run-btn" onclick="event.stopPropagation();runLayer('${id}')">
-            <svg width="9" height="9" viewBox="0 0 12 12" fill="currentColor"><path d="M2 1l9 5-9 5V1z"/></svg>
-            ${isE2E ? 'Start E2E' : 'Run'}
-          </button>
-          <button class="btn btn-danger btn-sm stop-btn" style="display:none" onclick="event.stopPropagation();stopLayer('${id}')">
-            ■ Stop
-          </button>
-          <div class="spinner card-spinner" style="display:none"></div>
         </div>
         <div class="card-log"></div>
       </div>
@@ -923,7 +1177,10 @@ function buildE2EScenarioCards() {
     card.className = 'scenario-card';
     card.dataset.id = sc.id;
     card.innerHTML = `
-      <div class="sc-name">${sc.name}</div>
+      <div class="sc-header">
+        <div class="sc-dot"></div>
+        <div class="sc-name">${sc.name}</div>
+      </div>
       <div class="sc-persona">${sc.persona}</div>
       <div class="sc-status">Pending</div>
     `;
@@ -934,6 +1191,7 @@ function buildE2EScenarioCards() {
 /* ── Init ────────────────────────────────────────────────────────────────── */
 buildLayerCards();
 buildE2EScenarioCards();
+restoreState();
 connectWS();
 </script>
 </body>

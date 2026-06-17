@@ -8,6 +8,7 @@ Voice Agent Test Dashboard — FastAPI + WebSocket backend.
 import asyncio
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -81,16 +82,42 @@ async def _external_agent_running() -> bool:
         return False
 
 
+async def _agent_status_payload() -> dict:
+    """Return current agent worker status for broadcasting."""
+    pid = None
+    running = False
+    if _agent_proc is not None and _agent_proc.returncode is None:
+        running = True
+        pid = _agent_proc.pid
+    elif await _external_agent_running():
+        running = True
+        try:
+            p = await asyncio.create_subprocess_exec(
+                "pgrep", "-f", "agent.py start",
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
+            )
+            out, _ = await p.communicate()
+            pids = out.strip().split()
+            if pids:
+                pid = int(pids[0])
+        except Exception:
+            pass
+    return {"type": "agent_status", "running": running, "pid": pid}
+
+
 async def _watch_agent_worker(proc: asyncio.subprocess.Process):
+    await _broadcast(await _agent_status_payload())
     async for raw in proc.stdout:
         line = raw.decode("utf-8", errors="replace").rstrip()
         if not line:
             continue
         if "registered worker" in line.lower():
             _agent_ready.set()
+            await _broadcast(await _agent_status_payload())
         await _broadcast({"type": "log", "layer": "e2e", "text": f"[agent worker] {line}", "level": "info"})
     await proc.wait()
     _agent_ready.clear()
+    await _broadcast({"type": "agent_status", "running": False, "pid": None})
 
 
 async def _ensure_agent_worker():
@@ -106,6 +133,7 @@ async def _ensure_agent_worker():
                 "text": "Using already-running agent worker (started outside the UI).",
                 "level": "section",
             })
+            await _broadcast(await _agent_status_payload())
             return
 
         await _broadcast({
@@ -183,20 +211,43 @@ async def _run_layer(layer_id: str):
 
         await _broadcast({"type": "log", "layer": layer_id, "text": line, "level": level})
 
-        # Parse E2E conversation lines printed by _print_transcript()
+        # Parse E2E lines — two sources:
+        #   1. Live per-turn logs from caller_bot:  "INFO caller-bot: [turn N] agent: ..." / "...caller: ..."
+        #   2. End-of-scenario transcript block:    "  [AGENT ] text" / "  [CALLER] text"
         if layer_id == "e2e":
             low = line.lower()
-            if "[agent]" in low:
-                txt = line.split("[AGENT]", 1)[-1] if "[AGENT]" in line else line.split("[agent]", 1)[-1]
-                await _broadcast({"type": "e2e_turn", "role": "agent", "text": txt.strip()})
+            # Live turn logs (real-time, most useful for E2E Live tab)
+            if "] agent:" in low:
+                txt = line.split("] agent:", 1)[-1].strip()
+                if txt:
+                    await _broadcast({"type": "e2e_turn", "role": "agent", "text": txt})
+            elif "] caller:" in low:
+                txt = line.split("] caller:", 1)[-1].strip()
+                if txt:
+                    await _broadcast({"type": "e2e_turn", "role": "caller", "text": txt})
+            # End-of-scenario transcript block: "[AGENT ]" or "[CALLER]"
+            elif "[agent " in low or "[agent]" in low:
+                txt = re.sub(r"^\s*\[agent\s*\]\s*", "", line, flags=re.IGNORECASE).strip()
+                if txt:
+                    await _broadcast({"type": "e2e_turn", "role": "agent", "text": txt})
             elif "[caller]" in low:
-                txt = line.split("[CALLER]", 1)[-1] if "[CALLER]" in line else line.split("[caller]", 1)[-1]
-                await _broadcast({"type": "e2e_turn", "role": "caller", "text": txt.strip()})
-            elif "── transcript:" in low:
-                scenario = line.lower().split("── transcript:")[-1].strip().replace("─", "").strip()
+                txt = re.sub(r"^\s*\[caller\]\s*", "", line, flags=re.IGNORECASE).strip()
+                if txt:
+                    await _broadcast({"type": "e2e_turn", "role": "caller", "text": txt})
+            elif "── starting scenario:" in low:
+                scenario = line.split(":", 1)[-1].strip().replace("─", "").strip()
                 await _broadcast({"type": "e2e_scenario", "name": scenario})
-            elif "goal_completed" in low or "goal not completed" in low:
-                await _broadcast({"type": "e2e_goal", "text": line.strip()})
+            # caller_bot logs: "Scenario 'X' done: goal=True turns=N"
+            elif "done: goal=" in low:
+                m = re.search(r"scenario '([^']+)' done: goal=(\w+)\s+turns=(\d+)", line, re.IGNORECASE)
+                if m:
+                    await _broadcast({
+                        "type": "e2e_goal",
+                        "text": line.strip(),
+                        "success": m.group(2).lower() == "true",
+                        "scenario": m.group(1),
+                        "turns": int(m.group(3)),
+                    })
             elif "task completion rate" in low:
                 await _broadcast({"type": "e2e_metric", "text": line.strip()})
 
@@ -267,6 +318,10 @@ async def serve_report():
 async def ws_endpoint(ws: WebSocket):
     await ws.accept()
     _sockets.append(ws)
+    # Send current state immediately so a reconnecting browser sees reality
+    await ws.send_text(json.dumps(await _agent_status_payload()))
+    e2e_running = "e2e" in _procs and _procs["e2e"].returncode is None
+    await ws.send_text(json.dumps({"type": "status", "layer": "e2e", "status": "running" if e2e_running else "idle"}))
     try:
         while True:
             raw = await ws.receive_text()
@@ -291,6 +346,25 @@ async def ws_endpoint(ws: WebSocket):
                 else:
                     _stop(layer)
                 await _broadcast({"type": "status", "layer": layer, "status": "idle"})
+
+            elif action == "kill_agent":
+                global _agent_proc
+                if _agent_proc is not None:
+                    try:
+                        _agent_proc.terminate()
+                    except Exception:
+                        pass
+                    _agent_proc = None
+                kill_p = await asyncio.create_subprocess_exec(
+                    "pkill", "-9", "-f", "agent.py start",
+                    stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL,
+                )
+                await kill_p.wait()
+                _agent_ready.clear()
+                await _broadcast({"type": "agent_status", "running": False, "pid": None})
+
+            elif action == "start_agent":
+                asyncio.create_task(_ensure_agent_worker())
 
             elif action == "generate_report":
                 async def _gen():
